@@ -1,0 +1,4 @@
+Flask
+seleniumbase
+aiohttp
+gunicorn
