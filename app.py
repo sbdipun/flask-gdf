@@ -41,15 +41,12 @@ def get_size(size):
 # ===== LOGIN TO GET PHPSESSID =====
 
 def get_phpsessionid(email, password):
-    options = {
-        "headless": True,
-        "incognito": True,
-        "disable-gpu": True,
-        "disable-dev-shm-usage": True,
-        "no-sandbox": True,
-    }
-
-    driver = Driver(browser="chrome", **options)
+    # Use headless mode and pass extra args via chromium_arg
+    driver = Driver(
+        browser="chrome",
+        headless=True,  # This enables headless mode
+        chromium_arg="--disable-gpu,--no-sandbox,--disable-dev-shm-usage,--incognito"
+    )
 
     try:
         # Open login page
