@@ -1,14 +1,20 @@
-from flask import Flask, request, jsonify
-from seleniumbase import Driver
 import time
-import asyncio
-import aiohttp
-import json
-import re
 import tempfile
 import os
+import json
+import re
+from flask import Flask, request, jsonify
+from seleniumbase import Driver
+import asyncio
+import aiohttp
 
 app = Flask(__name__)
+
+# ===== GLOBAL CACHE FOR PHPSESSID =====
+SESSION_CACHE = {
+    "session_id": None,
+    "expires_at": 0
+}
 
 # ===== UTILITY FUNCTIONS =====
 
@@ -43,21 +49,24 @@ def get_size(size):
 # ===== LOGIN TO GET PHPSESSID =====
 
 def get_phpsessionid(email, password):
-    # Create a unique temporary user-data-dir
-    temp_profile = tempfile.mkdtemp()
+    print("🔐 Starting login process...")
 
-    print(f"📁 Using temporary profile: {temp_profile}")
+    # Only one session at a time
+    if SESSION_CACHE["session_id"] and SESSION_CACHE["expires_at"] > time.time():
+        print("✅ Reusing cached PHPSESSID")
+        return SESSION_CACHE["session_id"]
 
-    # Launch Chrome with the unique profile
+    print("🔄 Logging in to refresh PHPSESSID...")
+
     driver = Driver(
         browser="chrome",
         headless=True,
         chromium_arg=[
-            f"--user-data-dir={temp_profile}",  # Use unique dir every run
             "--disable-gpu",
             "--no-sandbox",
             "--disable-dev-shm-usage",
-            "--incognito"
+            "--incognito",
+            "--disable-automation"
         ]
     )
 
@@ -93,15 +102,22 @@ def get_phpsessionid(email, password):
             raise Exception("PHPSESSID not found in cookies")
 
         print("✅ PHPSESSID:", phpsessionid)
+
+        # Cache session for 24 hours
+        SESSION_CACHE.update({
+            "session_id": phpsessionid,
+            "expires_at": time.time() + 86400  # 24 hours
+        })
+
         return phpsessionid
 
     finally:
-        driver.quit()
-        # Optional: Clean up the temp folder after use
+        print("🛑 Closing browser...")
         try:
-            os.rmdir(temp_profile)
+            driver.quit()
         except Exception as e:
-            print(f"⚠️ Could not delete temp profile: {e}")
+            print("⚠️ Error closing driver:", str(e))
+
 # ===== SHARE FILE USING aiohttp =====
 
 async def share_file(session_id, file_id):
@@ -161,7 +177,7 @@ def generate_link():
     EMAIL = "cinehub4u@gmail.com"
     PASSWORD = "Daddy@9090"
 
-    # Get session ID
+    # Get session ID from cache or refresh
     session_id = get_phpsessionid(EMAIL, PASSWORD)
 
     # Run async function inside Flask
@@ -176,4 +192,4 @@ def generate_link():
 # ===== RUNNER =====
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
