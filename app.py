@@ -5,6 +5,8 @@ import asyncio
 import aiohttp
 import json
 import re
+import tempfile
+import os
 
 app = Flask(__name__)
 
@@ -41,11 +43,22 @@ def get_size(size):
 # ===== LOGIN TO GET PHPSESSID =====
 
 def get_phpsessionid(email, password):
-    # Use headless mode and pass extra args via chromium_arg
+    # Create a unique temporary user-data-dir
+    temp_profile = tempfile.mkdtemp()
+
+    print(f"📁 Using temporary profile: {temp_profile}")
+
+    # Launch Chrome with the unique profile
     driver = Driver(
         browser="chrome",
-        headless=True,  # This enables headless mode
-        chromium_arg="--disable-gpu,--no-sandbox,--disable-dev-shm-usage,--incognito"
+        headless=True,
+        chromium_arg=[
+            f"--user-data-dir={temp_profile}",  # Use unique dir every run
+            "--disable-gpu",
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--incognito"
+        ]
     )
 
     try:
@@ -58,7 +71,7 @@ def get_phpsessionid(email, password):
         driver.type("[name='password']", password)
         time.sleep(1)
 
-        # Wait for and click reCAPTCHA checkbox
+        # Wait for reCAPTCHA iframe
         print("⏳ Waiting for reCAPTCHA...")
         time.sleep(3)
 
@@ -84,7 +97,11 @@ def get_phpsessionid(email, password):
 
     finally:
         driver.quit()
-
+        # Optional: Clean up the temp folder after use
+        try:
+            os.rmdir(temp_profile)
+        except Exception as e:
+            print(f"⚠️ Could not delete temp profile: {e}")
 # ===== SHARE FILE USING aiohttp =====
 
 async def share_file(session_id, file_id):
