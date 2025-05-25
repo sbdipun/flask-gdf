@@ -123,20 +123,19 @@ async def share_file(session_id, file_id):
 
 # ===== FLASK ENDPOINT =====
 
-@app.route('/generate', methods=['POST'])
+@app.route('/gdrive', methods=['GET'])
 def generate_link():
-    data = request.get_json()
-    gdrive_link = data.get('gdrive_link')
+    gdrive_link = request.args.get('url')
 
     if not gdrive_link:
-        return jsonify({"error": "Missing 'gdrive_link' in request"}), 400
+        return jsonify({"error": "Missing 'url' parameter"}), 400
 
     # Extract file ID
     file_id = extract_google_drive_file_id(gdrive_link)
     if not file_id:
         return jsonify({"error": "Invalid Google Drive link"}), 400
 
-    # Hardcoded credentials (or load from environment variables)
+    # Hardcoded credentials
     EMAIL = "cinehub4u@gmail.com"
     PASSWORD = "Daddy@9090"
 
