@@ -41,14 +41,15 @@ def get_size(size):
 # ===== LOGIN TO GET PHPSESSID =====
 
 def get_phpsessionid(email, password):
-    # Add unique user data dir or disable it
     options = {
         "headless": True,
+        "incognito": True,
         "disable-gpu": True,
-        "incognito": True,  # Use incognito mode (no persistent profile)
+        "disable-dev-shm-usage": True,
+        "no-sandbox": True,
     }
 
-    driver = Driver(browser="chrome", chromium_arg="--disable-dev-shm-usage", **options)
+    driver = Driver(browser="chrome", **options)
 
     try:
         # Open login page
